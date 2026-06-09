@@ -1,0 +1,1066 @@
+openapi: 3.0.3
+info:
+  title: WasaText - OpenAPI 3.0
+  description: |
+    This API allows sharing and receiving messages among users in WasaText.
+  version: 0.0.1
+tags:
+  - name: Users
+    description: Operations related to user profiles
+  - name: Conversations
+    description: Operations to manage user conversations
+  - name: Messages
+    description: Operations to send, forward, comment on, and delete messages
+  - name: Groups
+    description: Operations for managing groups, including adding members and changing group details
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      title: User
+      type: object
+      description: Details of a registered user
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          description: Unique identifier of the User
+        username:
+          type: string
+          description: Username of the User
+          minLength: 3
+          maxLength: 30
+          pattern: "^[a-zA-Z0-9_]+$"
+        photo:
+          type: string
+          format: uri
+          pattern: "^[a-zA-Z0-9_]+$"
+          description: URL to the User's profile photo
+          minLength: 1
+          maxLength: 20
+      required:
+        - id
+        - username
+  
+
+    Conversation:
+      title: Conversation
+      type: object
+      description: Details of a conversation between users
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          description: Unique identifier of the conversation
+        lastconvo:
+          type: string
+          format: date-time
+          pattern: "^[a-zA-Z0-9_]+$"
+          description: Timestamp of the last message in the conversation
+          minLength: 1
+          maxLength: 20
+        participant:
+          allOf:
+            - $ref: '#/components/schemas/User'
+            - description: The participant (receiver) in the conversation
+          description: Information about the participant in the conversation, typically the receiver or another user involved in the exchange.
+
+      required:
+        - id
+        - lastconvo
+        - participant
+
+
+    Message:
+      title: Message
+      type: object
+      description: Details of a message sent between users or in a group
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          description: Unique identifier of the message
+        timestamp:
+          type: string
+          format: date-time
+          pattern: "^[a-zA-Z0-9_]+$"
+          description: Timestamp when the message was sent
+          minLength: 1
+          maxLength: 20
+        content:
+          description: Content of the message, which can either be text or a media file URL
+          oneOf:
+            - type: string
+              description: Text content of the message
+              minLength: 1
+              maxLength: 1000
+              pattern: "^.*$"
+            - type: string
+              minLength: 3
+              maxLength: 50
+              pattern: "^.*$"
+              format: uri
+              description: URL pointing to an attached image or media file
+        senderUsername:
+          description: Information about the user who sent the message, including their username and profile details.
+          allOf:
+            - $ref: '#/components/schemas/User'
+            - description: Username of the sender
+        status:
+          type: string
+          pattern: "^[a-zA-Z0-9_]+$"
+          minLength: 3
+          maxLength: 50
+          
+          enum:
+            - "sent"
+            - "delivered"
+            - "read"
+          description: Status of the message, represented by "sent," "delivered," or "read"
+      required:
+        - id
+        - timestamp
+        - content
+        - senderUsername
+        - status
+
+      
+    
+
+security:
+  - bearerAuth: []
+
+paths:
+  /session:
+    post:
+      tags: ["login"]
+      summary: Logs in the user
+      description: |-
+        If the user does not exist, it will be created,
+        and an identifier is returned.
+        If the user exists, the user identifier is returned.
+      operationId: doLogin
+      requestBody:
+        description: User details
+        content:
+          application/json:
+            schema:
+              description: some description
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the user
+                  example: Maria
+                  pattern: '^[a-zA-Z0-9]+$'
+                  minLength: 3
+                  maxLength: 16
+        required: true
+      responses:
+        '201':
+          description: User log-in action successful
+          content:
+            application/json:
+              schema:
+                description: some description
+                type: object
+                properties:
+                  identifier:
+                    type: string
+                    pattern: "^[a-zA-Z0-9_]+$"
+                    minLength: 3
+                    maxLength: 50
+                    description: Identifier of the logged-in user
+                    example: "abcdef012345"
+
+  # I Send a JSON with name of user, server finds orr not, if not find create an user, if finds back token. 
+
+
+  /users/me/username:
+    put:
+      tags:
+        - Users
+      summary: Set my username
+      description: Updates the username of the authenticated user.
+      operationId: setMyUserName
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload for updating the username
+              properties:
+                username:
+                  type: string
+                  description: New username for the user
+                  minLength: 3
+                  maxLength: 50
+                  pattern: "^[a-zA-Z0-9_]+$"
+                  example: "new_username"
+      responses:
+        '200':
+          description: Username updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Response object for a successful username update
+                properties:
+                  message:
+                    type: string
+                    description: Success message confirming the username update
+                    pattern: ^.*$
+                    minLength: 3
+                    maxLength: 50
+                    example: "Username updated successfully"
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message for invalid input
+                pattern: "^[a-zA-Z0-9_]+$"
+                minLength: 3
+                maxLength: 50
+        '409':
+          description: Username already in use
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the username is already taken
+                pattern: "^[a-zA-Z0-9_]+$"
+                minLength: 3
+                maxLength: 50
+
+# server checks format and unuque of username, update and back 
+
+  #  новый ендпоинт
+  /users/me/photo:
+      put:
+        tags:
+          - Users
+        summary: Set my photo
+        description: Updates the photo of the authenticated user.
+        operationId: setMyPhoto
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                # ПОМЕНЯТЬ
+                description: Payload containing the URL of the new user photo.
+                properties:
+                  photo:
+                    type: string
+                    description: The URL of the new photo to set as the user's profile photo.
+                    pattern: "^(https?://).+$" 
+                    minLength: 1
+                    maxLength: 100
+                    format: uri
+                    example: "https://example.com/photos/user-photo.png"
+        responses:
+          '200':
+            description: User photo updated successfully.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  description: Success response containing a confirmation message.
+                  properties:
+                    message:
+                      type: string
+                      description: A confirmation message indicating the user photo was updated successfully.
+                      pattern: ^.*$
+                      minLength: 3
+                      maxLength: 100
+                      example: "User photo updated successfully."
+          '404':
+            description: User not found.
+            content:
+              application/json:
+                schema:
+                  type: string
+                  description: Error message indicating the specified user could not be found.
+                  pattern: ^.*$
+                  minLength: 3
+                  maxLength: 50
+
+
+  /users/{id}/conversations:
+    get:
+      tags:
+        - Conversations
+      summary: Get my conversations
+      description: Retrieves a list of all conversations involving the authenticated user.
+      operationId: getMyConversations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The unique identifier of the user whose conversations are being retrieved.
+      responses:
+        '200':
+          description: List of conversations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                description: An array containing conversation objects
+                items:
+                  $ref: '#/components/schemas/Conversation'
+                minItems: 1
+                maxItems: 100
+
+
+  /conversations/{c_id}:
+    get:
+      tags:
+        - Conversations
+      summary: Get a specific conversation
+      description: Retrieves details of a specific conversation by its unique ID.
+      operationId: getConversation
+      parameters:
+        - name: c_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The unique identifier of the conversation being retrieved.
+      responses:
+        '200':
+          description: Conversation details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+                # description: Schema of a conversation object containing detailed information about the conversation.
+        '404':
+          description: Conversation not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating that the requested conversation was not found.
+                pattern: ^.*$
+                minLength: 3
+                maxLength: 50
+                example: "Conversation not found"
+
+
+
+  /conversations/{conversation_id}/messages:
+    parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation.
+
+    post:
+      tags:
+        - Messages
+      summary: Send a message in a conversation
+      description: Sends a new message within a specific conversation for the authenticated user.
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload for creating a new message.
+              properties:
+                content:
+                  type: string
+                  description: The content of the message to be sent.
+                  pattern: "^[a-zA-Z0-9_]+$" 
+                  minLength: 3
+                  maxLength: 50
+                status:
+                  type: string
+                  description: The status of the message, indicating its delivery state.
+                  pattern: "^[a-zA-Z0-9_]+$"
+                  minLength: 3
+                  maxLength: 150
+                  enum:
+                    - "sent"
+                    - "delivered"
+                    - "read"
+      responses:
+        '201':
+          description: Message sent successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /conversations/{conversation_id}/messages/{message_id}/forward/{target_conversation_id}:
+    parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation.
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the message to be forwarded.
+      - name: target_conversation_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation to be forwarded.
+
+    post:
+      tags:
+        - Messages
+      summary: Forward a message
+      description: Forwards an existing message to another conversation for the authenticated user.
+      operationId: forwardMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload for forwarding a message to another conversation.
+              properties:
+                conversationId:
+                  type: integer
+                  description: The unique identifier of the target conversation where the message will be forwarded.
+      responses:
+        '200':
+          description: Message forwarded successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: A success response containing a confirmation message.
+                properties:
+                  message:
+                    type: string
+                    description: A confirmation message indicating the message was forwarded successfully.
+                    pattern: ^.*$
+                    minLength: 3
+                    maxLength: 50
+                    example: "Message forwarded successfully"
+        '404':
+          description: Message not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: An error message indicating the requested message could not be found.
+                pattern: "^[a-zA-Z0-9_]+$"
+                minLength: 3
+                maxLength: 50
+
+
+
+  /conversations/{conversation_id}/messages/{message_id}/comments:
+    parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation.
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the message.
+
+    post:
+      tags:
+        - Messages
+      summary: Comment on a message
+      description: Adds a comment to a specific message in a conversation.
+      operationId: commentMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload for adding a comment to a message.
+              properties:
+                comment:
+                  type: string
+                  description: The text content of the comment.
+                  pattern: "^[a-zA-Z0-9_]+$"
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Comment added successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Response indicating that the comment was added successfully.
+                properties:
+                  message:
+                    type: string
+                    minLength: 0
+                    maxLength: 50
+                    description: Confirmation message.
+                    pattern: ^.*$
+                    example: "Comment added successfully"
+        '404':
+          description: Message not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the message could not be found.
+                pattern: "^[a-zA-Z0-9_]+$"
+                minLength: 3
+                maxLength: 50
+
+  /conversations/{conversation_id}/messages/{message_id}/comments/{comment_id}:
+    parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation.
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the message.
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the comment.
+
+    delete:
+      tags:
+        - Messages
+      summary: Delete a comment from a message
+      description: Deletes a specific comment from a message by its unique identifiers.
+      operationId: uncommentMessage
+      responses:
+        '204':
+          description: Comment deleted successfully.
+        '404':
+          description: Message or comment not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating that the message or comment could not be found.
+                pattern: "^[a-zA-Z0-9_]+$"
+                minLength: 3
+                maxLength: 50
+
+  /conversations/{conversation_id}/messages/{message_id}:
+    parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation.
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the message.
+
+    delete:
+      tags:
+        - Messages
+      summary: Delete a specific message
+      description: Deletes a message by its unique identifier in a conversation.
+      operationId: deleteMessage
+      responses:
+        '204':
+          description: Message deleted successfully.
+        '404':
+          description: Message not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the message could not be found.
+                pattern: "^[a-zA-Z0-9_]+$"
+                minLength: 3
+                maxLength: 50
+
+
+
+  /groups/{c_id}/members:
+    parameters:
+      - name: c_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation.
+    post:
+      tags:
+        - Groups
+      summary: Add a user to a group
+      description: Adds a specified user to the group by its unique identifier.
+      operationId: addToGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload for adding a user to the group.
+              properties:
+                userId:
+                  type: integer
+                  description: The unique identifier of the user to be added to the group.
+      responses:
+        '200':
+          description: User added to the group successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Success response indicating the user was added.
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message.
+                    pattern: "^[a-zA-Z0-9_ ]+$"
+                    minLength: 3
+                    maxLength: 50
+                    example: "User added to the group successfully"
+        '404':
+          description: Group or user not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the group or user could not be found.
+                pattern: "^[a-zA-Z0-9_ ]+$"
+                minLength: 3
+                maxLength: 50
+
+  /groups/{c_id}/leave:
+    parameters:
+      - name: c_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation.
+    delete:
+      tags:
+        - Groups
+      summary: Leave a group
+      description: Allows the authenticated user to leave the specified group.
+      operationId: leaveGroup
+      responses:
+        '200':
+          description: Successfully left the group.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Success response indicating the user has left the group.
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message.
+                    pattern: "^[a-zA-Z0-9_ ]+$"
+                    minLength: 3
+                    maxLength: 50
+                    example: "Successfully left the group"
+        '404':
+          description: Group not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the group could not be found.
+                pattern: "^[a-zA-Z0-9_ ]+$"
+                minLength: 3
+                maxLength: 50
+
+  /groups/{c_id}/name:
+    parameters:
+      - name: c_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation.
+    put:
+      tags:
+        - Groups
+      summary: Update group name
+      description: Updates the name of the specified group by its unique identifier.
+      operationId: setGroupName
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload for updating the group's name.
+              properties:
+                name:
+                  type: string
+                  description: The new name for the group.
+                  minLength: 1
+                  maxLength: 100
+                  pattern: "^[a-zA-Z0-9_ ]+$" # legex limits 
+      responses:
+        '200':
+          description: Group name updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Success response indicating the group's name was updated.
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message.
+                    pattern: "^[a-zA-Z0-9_ ]+$"
+                    minLength: 3
+                    maxLength: 50
+                    example: "Group name updated successfully"
+        '404':
+          description: Group not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the group could not be found.
+                pattern: "^[a-zA-Z0-9_ ]+$"
+                minLength: 3
+                maxLength: 50
+
+
+
+  /conversations/{c_id}/set-group-photo:
+    parameters:
+      - name: c_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the conversation that contains the group.
+    put:
+      tags:
+        - Groups
+      summary: Update group photo
+      description: Allows the authenticated user to update the profile photo of a specific group identified by its unique ID within a conversation.
+      operationId: setGroupPhoto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload containing the URL of the new group photo.
+              properties:
+                photo:
+                  type: string
+                  description: The URL of the new photo to set as the group's profile photo.
+                  pattern: "^(https?://).+$"
+                  minLength: 1
+                  maxLength: 100
+                  format: uri
+                  example: "https://example.com/photos/group-photo.png"
+      responses:
+        '200':
+          description: Group photo updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Success response containing a confirmation message.
+                properties:
+                  message:
+                    type: string
+                    description: A confirmation message indicating the group photo was updated successfully.
+                    pattern: ^.*$
+                    minLength: 3
+                    maxLength: 100
+                    example: "Group photo updated successfully."
+        '404':
+          description: Group not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the specified group could not be found.
+                pattern: ^.*$
+                minLength: 3
+                maxLength: 50
+
+  /users/{id}/conversations/first-message:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The unique identifier of the user.
+
+    post:
+      tags:
+        - Messages
+      summary: Send the first message
+      description: Sends the first message in a conversation with a user.
+      operationId: sendMessageFirst
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload for sending the first message.
+              properties:
+                content:
+                  type: string
+                  description: The content of the first message to be sent.
+                  pattern: "^[a-zA-Z0-9_]+$"
+                  minLength: 3
+                  maxLength: 50
+                status:
+                  type: string
+                  description: The status of the message, indicating its delivery state.
+                  pattern: "^[a-zA-Z0-9_]+$"
+                  minLength: 3
+                  maxLength: 50
+                  enum:
+                    - "sent"
+                    - "delivered"
+                    - "read"
+      responses:
+        '201':
+          description: First message sent successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        
+  /groups:
+    post:
+      tags:
+        - Groups
+      summary: Create a group
+      description: Creates a new group with the specified name and members.
+      operationId: createGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload for creating a new group.
+              properties:
+                name:
+                  type: string
+                  description: The name of the new group.
+                  minLength: 1
+                  maxLength: 100
+                  pattern: "^[a-zA-Z0-9_ ]+$"
+                members:
+                  type: array
+                  description: An array of user IDs to add as members of the group.
+                  items:
+                    type: integer
+                  minItems: 1
+                  maxItems: 1000
+      responses:
+        '201':
+          description: Group created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Success response indicating the group was created.
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message.
+                    pattern: "^[a-zA-Z0-9_ ]+$"
+                    minLength: 3
+                    maxLength: 50
+                    example: "Group created successfully"
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating invalid input.
+                pattern: "^[a-zA-Z0-9_ ]+$"
+                minLength: 3
+                maxLength: 50
+        '409':
+          description: Group name already in use
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the group name is already taken.
+                pattern: "^[a-zA-Z0-9_ ]+$"
+                minLength: 3
+                maxLength: 50
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user details
+      description: Retrieves the details of a user by their unique identifier.
+      operationId: getUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The unique identifier of the user.
+      responses:
+        '200':
+          description: User details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Error message indicating the user could not be found.
+                pattern: ^.*$
+                minLength: 3
+                maxLength: 50
+
+
+
+
+
+
+# doLogin (see simplified login)
+#   POST /session
+#   Body (JSON): { "name": "<username>" }
+#   -> create user if not exists / return existing user
+#   <- 201 { "identifier": "<token/userID>" } (store in localStorage)
+
+# setMyUserName
+#   PUT /users/me/username
+#   Body (JSON): { "username": "<new_username>" }
+#   -> validate + ensure unique + update username
+#   <- 200 { "message": "Username updated successfully" }
+
+# getMyConversations
+#   GET /users/{id}/conversations
+#   -> return list of user conversations (private/group, last activity, participant info)
+#   <- 200 [ Conversation, ... ]
+
+# getConversation
+#   GET /conversations/{c_id}
+#   -> return conversation details + all messages (including reply_to info if present)
+#   <- 200 { "conversation": {...}, "messages": [...] }
+
+# sendMessage
+#   POST /conversations/{conversation_id}/messages
+#   Body (multipart/form-data):
+#     - text: content + content_type="text"
+#     - file: file=<blob> (backend infers photo/gif by extension)
+#     - optional: reply_to=<message_id>
+#   -> check membership, save upload to /uploads if file, insert message into DB
+#   <- 201 { message, content_type, content, sender_username, sender_photo }
+
+# forwardMessage
+#   POST /conversations/{conversation_id}/messages/{message_id}/forward/{target_conversation_id}
+#   Target:
+#     - target_conversation_id = number -> forward to existing chat/group (body can be {})
+#     - target_conversation_id = "new"  -> Body (JSON): { "target_username": "<user_or_group_name>" }
+#   -> check membership source+target; if "new" find/create target conversation;
+#      read original message content; insert new message into target as current user
+#   <- 200 { "message": "Message forwarded successfully" }
+
+# commentMessage
+#   POST /conversations/{conversation_id}/messages/{message_id}/comments
+#   Body:
+#     - file: multipart/form-data { file=<blob> } (photo/gif)
+#     - text/emoji: JSON { "content_type": "text"|"emoji", "content": "..." }
+#   -> check membership; save upload if file;
+#      if original message deleted -> add as normal message; else -> add comment linked to message
+#   <- 201 { message, content_type, content } (or "comment added as normal message")
+
+# uncommentMessage
+#   DELETE /conversations/{conversation_id}/messages/{message_id}/comments/{comment_id}
+#   -> check membership + comment owner; delete comment
+#   <- 200/204 success
+
+# deleteMessage
+#   DELETE /conversations/{conversation_id}/messages/{message_id}
+#   -> verify message exists; convert its comments to normal messages; delete message
+#   <- 200/204 success
+
+# addToGroup
+#   POST /groups/{c_id}/members
+#   Body (JSON): { "usernames": ["u1","u2", ...] }   (backend expects usernames list)
+#   -> requester must be member; add each user to convmembers if not already in group
+#   <- 200 { message, c_id, added_users: [...] }
+
+# leaveGroup
+#   DELETE /groups/{c_id}/leave
+#   -> check it is a group + membership; remove user from group;
+#      if group becomes empty -> optionally delete group
+#   <- 200 { "message": "Successfully left the group" }
+
+# setGroupName
+#   PUT /groups/{c_id}/name
+#   Body (JSON): { "new_name": "<name>" }   (backend uses new_name)
+#   -> check group + membership + name uniqueness; update group name
+#   <- 200 { message, group_id, new_name }
+
+# setMyPhoto
+#   PUT /users/me/photo
+#   Spec says URL JSON: { "photo": "https://..." }
+#   (if you implement upload instead: multipart/form-data { photo=<file> })
+#   -> update user's photo (store URL or saved /uploads path)
+#   <- 200 { message, photo? }
+
+# setGroupPhoto
+#   PUT /conversations/{c_id}/set-group-photo
+#   Body (multipart/form-data): { photo=<file> }  (backend expects "photo")
+#   -> check group + membership; save file to /uploads; update group photo in DB
+#   <- 200 { message, photo: "/uploads/..." }
+
+

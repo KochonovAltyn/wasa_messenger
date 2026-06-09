@@ -1,0 +1,36 @@
+FROM golang:1.19.1 AS builder
+
+WORKDIR /src/
+
+# Копируем go.mod и go.sum // for hash dependencies
+COPY go.mod go.sum ./
+
+# Скачиваем зависимости
+RUN go mod download
+
+# Копируем весь код
+COPY . .
+
+# Собираем приложение БЕЗ vendor
+RUN go build -mod=readonly -o /app/webapi ./cmd/webapi
+
+# Финальный образ
+FROM debian:bullseye-slim
+
+# Устанавливаем CA сертификаты
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Копируем скомпилированное приложение
+COPY --from=builder /app/webapi /app/webapi
+
+# Рабочая директория
+WORKDIR /app
+
+# Открываем порт
+EXPOSE 3000
+
+# Запуск
+CMD ["/app/webapi"]
+
+
+
