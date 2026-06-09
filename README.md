@@ -1,224 +1,149 @@
-# 💬 WASA - WhatsApp Clone
+# WASA Messenger
 
-A full-stack WhatsApp Web clone built with Go backend and Vue.js frontend.
+A web-based messaging application developed for the Web and Software
+Architecture course. It consists of a Go backend exposing a REST API and a
+Vue.js single-page frontend. Users can register, manage conversations and
+groups, exchange messages with delivery/read status, and react to messages
+with emojis.
 
-![WhatsApp Interface](https://img.shields.io/badge/Interface-WhatsApp-25D366?style=for-the-badge&logo=whatsapp)
-![Go](https://img.shields.io/badge/Go-1.19-00ADD8?style=for-the-badge&logo=go)
-![Vue.js](https://img.shields.io/badge/Vue.js-3.2-4FC08D?style=for-the-badge&logo=vue.js)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)
+## Tech stack
 
----
+Backend:
+- Go 1.21
+- SQLite (pure-Go driver `modernc.org/sqlite`, no CGO required)
+- `julienschmidt/httprouter` for routing
+- `gorilla/handlers` for CORS
+- Standard library `log/slog` for logging
 
-## 🚀 Features
+Frontend:
+- Vue.js 3.2
+- Vite (build tool / dev server)
+- Axios (HTTP client)
+- Vue Router 4
 
-### ✨ Frontend (Vue.js)
-- 🎨 **Pixel-perfect WhatsApp UI** - Dark theme with authentic colors
-- 💬 **Real-time messaging** - Send and receive messages
-- 👥 **Group chats** - Create and manage group conversations
-- 🔍 **Search functionality** - Search messages and contacts
-- 😊 **Emoji support** - Full emoji picker
-- 📎 **File attachments** - Attach files to messages
-- 🔔 **Browser notifications** - Desktop notifications for new messages
-- 📱 **Responsive design** - Works on mobile and desktop
-- 🌐 **Multi-language** - English interface
+## Features
 
-### 🔧 Backend (Go)
-- 🗄️ **SQLite database** - Lightweight data storage
-- 🔐 **Authentication** - User login/register with tokens
-- 📨 **REST API** - RESTful endpoints for all operations
-- 👤 **User management** - Profile, username, photos
-- 💬 **Conversations** - Private and group chats
-- 📝 **Messages** - Send, forward, delete, comment
-- 👥 **Groups** - Create groups, add/remove members
+- User login/registration with token-based authentication
+- Profile management (username, profile photo)
+- Private (one-to-one) and group conversations
+- Sending text and media messages, with reply support
+- Message delivery and read status (single check / double check / read)
+- Emoji reactions on messages
+- Forwarding and deleting messages
+- Group management (create, add members, leave, rename, set photo)
+- User search
 
----
-
-## 🛠️ Tech Stack
-
-### Backend
-- **Language:** Go 1.19
-- **Database:** SQLite
-- **Framework:** Standard library + custom router
-- **API:** RESTful
-
-### Frontend
-- **Framework:** Vue.js 3.2
-- **Build Tool:** Vite
-- **HTTP Client:** Axios
-- **Router:** Vue Router 4
-- **Styling:** Scoped CSS (WhatsApp theme)
-
-### DevOps
-- **Containerization:** Docker + Docker Compose
-- **Package Manager:** npm
-- **Version Control:** Git
-
----
-
-## 📦 Project Structure
+## Project structure
 
 ```
 wasa_project/
 ├── cmd/
 │   ├── healthcheck/          # Health check utility
-│   └── webapi/               # Main API server
+│   └── webapi/               # Main API server entry point
 │       ├── main.go
 │       ├── cors.go
 │       ├── register-web-ui.go
 │       └── load-configuration.go
 ├── service/
-│   ├── api/                  # API handlers
+│   ├── api/                  # HTTP handlers (business logic)
 │   │   ├── api.go
 │   │   ├── users.go
 │   │   ├── conversations.go
+│   │   ├── reactions.go
 │   │   └── ...
-│   └── database/             # Database layer
-│       ├── database.go
-│       ├── users.go
-│       ├── conversations.go
-│       └── schemas.go
-├── webui/                    # Frontend application
+│   ├── database/             # Database layer
+│   │   ├── database.go
+│   │   ├── users.go
+│   │   ├── conversations.go
+│   │   ├── reactions.go
+│   │   └── schemas.go
+│   ├── applog/               # Logging facade over log/slog
+│   └── uid/                  # UUID generation
+├── webui/                    # Vue.js frontend
 │   ├── src/
-│   │   ├── components/       # Vue components
-│   │   │   └── WhatsAppView.vue
-│   │   ├── views/            # Page views
-│   │   │   └── HomeView.vue
-│   │   ├── router/           # Vue Router
-│   │   ├── services/         # API services
-│   │   │   └── axios.js
+│   │   ├── views/            # Page views (login, conversations, messages, ...)
+│   │   ├── components/       # Shared components
+│   │   ├── services/         # Axios API client
 │   │   ├── App.vue
 │   │   └── main.js
-│   ├── public/
 │   ├── package.json
 │   └── vite.config.js
-├── Dockerfile.backend        # Backend Docker image
-├── Dockerfile.frontend       # Frontend Docker image
-├── docker-compose.yml        # Docker Compose config
-├── go.mod                    # Go dependencies
-└── README.md                 # This file
+├── Dockerfile.backend
+├── Dockerfile.frontend
+├── go.mod
+└── README.md
 ```
 
----
+## Running locally
 
-## 🚀 Quick Start
+Prerequisites: Go 1.21+, Node.js 20+, npm.
 
-### Prerequisites
-
-- **Go 1.19+** - [Download](https://golang.org/dl/)
-- **Node.js 20+** - [Download](https://nodejs.org/)
-- **npm** - Comes with Node.js
-- **Docker** (optional) - [Download](https://www.docker.com/)
-
-### 🏃 Running Locally
-
-#### 1. Clone the repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/KochonovAltyn/wasa_messenger.git
-cd wasa_project
+cd wasa_messenger
 ```
 
-#### 2. Start Backend
+### 2. Backend
 
 ```bash
-# Install dependencies
 go mod download
-
-# Run backend server
 go run ./cmd/webapi
-
-# Backend will start on http://localhost:3000
 ```
 
-#### 3. Start Frontend (in a new terminal)
+The API server starts on `http://localhost:3000`. On first run it creates the
+SQLite database file automatically.
+
+### 3. Frontend (in a separate terminal)
 
 ```bash
 cd webui
-
-# Install dependencies
 npm install
-
-# Run development server
 npm run dev
-
-# Frontend will start on http://localhost:5173
 ```
 
-#### 4. Open in browser
+The frontend starts on `http://localhost:5173` and talks to the backend on
+port 3000.
 
-Navigate to: **http://localhost:5173**
+## Running with Docker
 
----
-
-## 🐳 Running with Docker
-
-### Option 1: Docker Compose (Recommended)
+Build and run the two images separately:
 
 ```bash
-# Build and start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-**Access:**
-- Frontend: http://localhost:8080
-- Backend API: http://localhost:3000
-
-### Option 2: Manual Docker Commands
-
-```bash
-# Build images
 docker build -f Dockerfile.backend -t wasa-backend .
 docker build -f Dockerfile.frontend -t wasa-frontend .
 
-# Run containers
 docker run -d --name wasa-backend -p 3000:3000 wasa-backend
 docker run -d --name wasa-frontend -p 8080:80 wasa-frontend
-
-# Check status
-docker ps
 ```
 
----
+## Main API endpoints
 
-## 📡 API Endpoints
+Authentication:
+- `POST /session` — login or register (returns the user identifier used as token)
 
-### Authentication
-- `POST /session` - Login/Register
+Users:
+- `GET /users/:id` — get user details
+- `PUT /users/me/username` — update username
+- `PUT /users/me/photo` — update profile photo
+- `GET /search/users` — search users
 
-### Users
-- `GET /users/{id}` - Get user details
-- `PUT /users/me/username` - Update username
-- `PUT /users/me/photo` - Update profile photo
+Conversations and messages:
+- `GET /users/:id/conversations` — list the user's conversations
+- `GET /conversations/:c_id` — get a conversation with its messages
+- `POST /conversations/:conversation_id/messages` — send a message
+- `POST /users/:id/conversations/first-message` — start a new private chat
+- `POST /conversations/:conversation_id/messages/:message_id/forward/:target_conversation_id` — forward
+- `DELETE /conversations/:conversation_id/messages/:message_id` — delete a message
 
-### Conversations
-- `GET /users/{id}/conversations` - List all chats
-- `GET /conversations/{c_id}` - Get specific conversation
-- `POST /conversations/{c_id}/messages` - Send message
-- `POST /users/{id}/conversations/first-message` - Start new chat
+Reactions:
+- `PUT /conversations/:c_id/messages/:message_id/reaction` — set an emoji reaction
+- `DELETE /conversations/:conversation_id/messages/:message_id/reaction` — remove a reaction
 
-### Messages
-- `POST /conversations/{c_id}/messages/{id}/forward/{target_id}` - Forward message
-- `POST /conversations/{c_id}/messages/{id}/comments` - Add comment
-- `DELETE /conversations/{c_id}/messages/{id}` - Delete message
-
-### Groups
-- `POST /groups` - Create group
-- `POST /groups/{c_id}/members` - Add member
-- `DELETE /groups/{c_id}/leave` - Leave group
-- `PUT /groups/{c_id}/name` - Update group name
-- `PUT /conversations/{c_id}/set-group-photo` - Update group photo
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-**⭐ If you like this project, please give it a star!**
-
-
+Groups:
+- `POST /groups` — create a group
+- `POST /groups/:c_id/members` — add a member
+- `DELETE /groups/:c_id/leave` — leave a group
+- `PUT /groups/:c_id/name` — rename a group
+- `PUT /conversations/:c_id/set-group-photo` — set group photo
