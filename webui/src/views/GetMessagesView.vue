@@ -141,8 +141,8 @@
                 <button class="forward-button" @click="toggleForwardPanel(message)">
                   {{ message.showForwardPanel ? "Cancel" : "Forward" }}
                 </button>
-                <button class="comment-button" @click="toggleComments(message)">
-                  {{ message.showComments ? "Hide" : "Comment" }}
+                <button class="react-button" @click="toggleReactions(message)">
+                  {{ message.showReactions ? "Close" : "React" }}
                 </button>
                 <button
                   v-if="message.sender_id === currentUser"
@@ -177,6 +177,32 @@
                 <p class="message-text">{{ message.content }}</p>
               </div>
 
+              <div v-if="message.showReactions" class="reactions-bar">
+                <button
+                  v-for="e in reactionEmojis"
+                  :key="e"
+                  class="reaction-btn"
+                  @click="addEmojiComment(message, e)"
+                >
+                  {{ e }}
+                </button>
+              </div>
+
+              <div
+                v-if="message.reactions && message.reactions.length"
+                class="reactions-list"
+              >
+                <span
+                  v-for="r in message.reactions"
+                  :key="r.user_id"
+                  class="reaction-pill"
+                  :title="r.username"
+                  @click="removeReaction(message, r)"
+                >
+                  {{ r.emoji }}
+                </span>
+              </div>
+
               <div v-if="message.showForwardPanel" class="forward-panel">
                 <input
                   type="text"
@@ -185,36 +211,6 @@
                   @keyup.enter="forwardMessageHandler(message)"
                 />
                 <button @click="forwardMessageHandler(message)">Forward</button>
-              </div>
-
-              <div v-if="message.showComments" class="comments-section">
-                <div v-for="c in message.comments" :key="c.id" class="single-comment">
-                  <p class="comment-header">
-                    <strong>{{ c.username }}</strong>
-                    <span class="comment-time">{{ formatDate(c.timestamp) }}</span>
-                    <button
-                      v-if="c.user_id === currentUser"
-                      @click="deleteComment(message, c)"
-                      class="delete-comment-button"
-                    >
-                      Delete
-                    </button>
-                  </p>
-                  <p class="comment-text">{{ c.content }}</p>
-                </div>
-                <div class="add-comment-form">
-                  <div class="reactions-bar">
-  <button
-    v-for="e in reactionEmojis"
-    :key="e"
-    class="reaction-btn"
-    @click="addEmojiComment(message, e)"
-  >
-    {{ e }}
-  </button>
-</div>
-
-                </div>
               </div>
             </div>
           </div>
@@ -482,7 +478,9 @@ export default {
               showComments: existingMsg.showComments,
               showForwardPanel: existingMsg.showForwardPanel,
               forwardTarget: existingMsg.forwardTarget,
-              status: existingMsg.status,
+              showReactions: existingMsg.showReactions || false,
+              // status and reactions come from the server (fresh values),
+              // so the read-receipt and reactions stay up to date on reload.
               reply_to: existingMsg.reply_to,
               reply_to_content: existingMsg.reply_to_content,
               reply_to_sender: existingMsg.reply_to_sender,
@@ -495,6 +493,7 @@ export default {
             comments: [],
             showComments: false,
             showForwardPanel: false,
+            showReactions: false,
             forwardTarget: "",
             status: fetchedMsg.status || "",
           };
@@ -668,24 +667,51 @@ export default {
       }
     },
 
+// toggleReactions shows/hides the emoji picker for a message.
+toggleReactions(message) {
+  message.showReactions = !message.showReactions;
+},
+
 async addEmojiComment(message, emoji) {
   const token = localStorage.getItem("authToken");
   const conversationID = this.$route.params.c_id;
   if (!token || !conversationID) return;
 
   try {
-    await axios.post(
-      `/conversations/${conversationID}/messages/${message.id}/comments`,
-      { content_type: "emoji", content: emoji },
+    // Set this user's emoji reaction on the message (one reaction per user).
+    await axios.put(
+      `/conversations/${conversationID}/messages/${message.id}/reaction`,
+      { emoji: emoji },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const response = await axios.get(`/messages/${message.id}/comments`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    message.comments = response.data;
+    // Close the picker and reload so the updated reactions are shown.
+    message.showReactions = false;
+    await this.getConversation();
   } catch (error) {
-    console.error("Error adding comment:", error);
+    console.error("Error adding reaction:", error);
+  }
+}
+,
+
+// removeReaction deletes the current user's reaction when they click their own
+// reaction pill. Reactions from other users are left untouched by the backend.
+async removeReaction(message, reaction) {
+  const token = localStorage.getItem("authToken");
+  const conversationID = this.$route.params.c_id;
+  const currentUserId = localStorage.getItem("userID");
+  if (!token || !conversationID) return;
+  // Only allow removing your own reaction.
+  if (reaction.user_id !== currentUserId) return;
+
+  try {
+    await axios.delete(
+      `/conversations/${conversationID}/messages/${message.id}/reaction`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    await this.getConversation();
+  } catch (error) {
+    console.error("Error removing reaction:", error);
   }
 }
 ,
@@ -1182,6 +1208,42 @@ async addEmojiComment(message, emoji) {
   color: #53bdeb; /* blue ✓✓ once the recipient has read the message */
 }
 
+/* Emoji reaction picker buttons */
+.reactions-bar {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+.reaction-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+.reaction-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Reactions shown under a message */
+.reactions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.reaction-pill {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 1px 7px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.reaction-pill:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .forwarded-label {
   font-size: 0.75rem;
   color: var(--wa-text-muted);
@@ -1198,6 +1260,7 @@ async addEmojiComment(message, emoji) {
 .reply-button,
 .forward-button,
 .comment-button,
+.react-button,
 .delete-button {
   padding: 6px 12px;
   border: none;
@@ -1206,6 +1269,11 @@ async addEmojiComment(message, emoji) {
   font-size: 0.85rem;
   font-weight: 500;
   transition: all 0.2s;
+}
+
+.react-button {
+  background-color: #00897b;
+  color: white;
 }
 
 .reply-button {
