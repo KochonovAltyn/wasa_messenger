@@ -116,15 +116,13 @@
                   v-if="message.sender_id === currentUser"
                   class="message-status"
                 >
+                  <!-- Single grey check = sent/delivered.
+                       Double check appears ONLY when every other member
+                       of the conversation has opened (read) the message. -->
                   <span
-                    v-if="!message.status || message.status === 'sent'"
+                    v-if="!message.status || message.status === 'sent' || message.status === 'delivered'"
                     class="status-sent"
                     >✓</span
-                  >
-                  <span
-                    v-else-if="message.status === 'delivered'"
-                    class="status-delivered"
-                    >✓✓</span
                   >
                   <span
                     v-else-if="message.status === 'read'"
@@ -165,6 +163,8 @@
                   alt="Image Message"
                   class="message-media"
                 />
+                <!-- Text sent together with the image (caption) -->
+                <p v-if="message.caption" class="message-text">{{ message.caption }}</p>
               </div>
               <div v-else-if="isGif(message.content)">
                 <img
@@ -172,6 +172,7 @@
                   alt="Gif Message"
                   class="message-media"
                 />
+                <p v-if="message.caption" class="message-text">{{ message.caption }}</p>
               </div>
               <div v-else>
                 <p class="message-text">{{ message.content }}</p>
@@ -192,14 +193,18 @@
                 v-if="message.reactions && message.reactions.length"
                 class="reactions-list"
               >
+                <!-- Each pill shows the emoji AND who reacted with it.
+                     Clicking your own pill removes your reaction. -->
                 <span
                   v-for="r in message.reactions"
                   :key="r.user_id"
                   class="reaction-pill"
-                  :title="r.username"
+                  :class="{ 'own-reaction': r.user_id === currentUser }"
+                  :title="r.user_id === currentUser ? 'Your reaction — click to remove' : 'Reaction by ' + r.username"
                   @click="removeReaction(message, r)"
                 >
                   {{ r.emoji }}
+                  <span class="reaction-author">{{ r.username }}</span>
                 </span>
               </div>
 
@@ -237,6 +242,15 @@
         <button @click="handleChangeName">✏️ Change Name</button>
         <button @click="handleChangePhoto">📷 Change Photo</button>
         <button class="danger" @click="handleLeaveGroup">🚪 Leave Group</button>
+      </div>
+    </transition>
+
+    <!-- ✅ Attached file indicator: the text typed below is sent as the
+         caption of this image, in ONE single message -->
+    <transition name="slide-up">
+      <div v-if="selectedFile" class="attachment-bar">
+        <span>📎 {{ selectedFile.name }} — the text below will be sent as caption</span>
+        <button class="cancel-reply" @click="clearSelectedFile">✕</button>
       </div>
     </transition>
 
@@ -382,6 +396,13 @@ export default {
     handleFileChange(event) {
       this.selectedFile = event.target.files[0];
       this.isInteracting = true;
+      // allow re-selecting the same file later
+      event.target.value = "";
+    },
+
+    clearSelectedFile() {
+      this.selectedFile = null;
+      this.isInteracting = false;
     },
 
     initiateReply(message) {
@@ -573,6 +594,7 @@ export default {
         const newMessage = {
           id: response.data.message_id || Date.now(),
           content: response.data.content,
+          caption: response.data.caption || "",
           sender_username: response.data.sender_username,
           sender_photo: response.data.sender_photo
             ? (response.data.sender_photo.startsWith(baseURL)
@@ -1239,9 +1261,23 @@ async removeReaction(message, reaction) {
   padding: 1px 7px;
   font-size: 0.95rem;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .reaction-pill:hover {
   background: rgba(255, 255, 255, 0.22);
+}
+
+/* Author of the reaction, shown right next to the emoji */
+.reaction-author {
+  font-size: 0.72rem;
+  color: var(--wa-text-secondary, #aebac1);
+}
+
+/* The current user's own reaction is highlighted (it is removable) */
+.own-reaction {
+  border: 1px solid var(--wa-accent, #00a884);
 }
 
 .forwarded-label {
@@ -1419,6 +1455,20 @@ async removeReaction(message, reaction) {
   font-weight: bold;
   cursor: pointer;
   font-size: 20px;
+}
+
+/* ===== ATTACHMENT BAR ===== */
+.attachment-bar {
+  background: linear-gradient(90deg, var(--wa-accent, #00a884) 4px, rgba(0, 168, 132, 0.15) 4px);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin: 0 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--wa-text-primary, #e9edef);
+  font-size: 0.9rem;
 }
 
 /* ===== INPUT BAR ===== */

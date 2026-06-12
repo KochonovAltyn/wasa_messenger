@@ -78,7 +78,14 @@ export default {
         }, 1000);
       } catch (error) {
         console.error("Error updating username:", error);
-        this.errorMessage = error.response?.data?.error || "An error occurred. Please try again.";
+        // Clear, specific error when the name is already taken by another user.
+        if (error.response?.status === 409) {
+          this.errorMessage =
+            error.response?.data?.error ||
+            `The username "${this.newUsername}" is already taken by another user. Please choose a different one.`;
+        } else {
+          this.errorMessage = error.response?.data?.error || "An error occurred. Please try again.";
+        }
       }
     }
   }

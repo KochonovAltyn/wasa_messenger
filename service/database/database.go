@@ -36,6 +36,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"strings"
 )
 
 // AppDatabase is the high level interface for the DB
@@ -78,8 +79,8 @@ type AppDatabase interface {
 	ConvertCommentsToMessages(messageID int, conversationID int) error
 	IsCommentOwner(userID string, commentID int) (bool, error)
 	DeleteComment(commentID int) error
-	SendMessageWithType(conversationID int, senderID string, content string, contentType string, replyTo *int) error
-	SendMessageWithMedia(conversationID int, senderID string, contentType string, content string) error
+	SendMessageWithType(conversationID int, senderID string, content string, contentType string, caption string, replyTo *int) error
+	SendMessageWithMedia(conversationID int, senderID string, contentType string, content string, caption string) error
 	SaveUploadedFile(file io.Reader, header *multipart.FileHeader, userID string) (string, string, error)
 	GetCommentsByMessageID(messageID int) ([]MessageComment, error)
 	GetConversationBetweenUsers(user1 string, user2 string) (Conversation, error)
@@ -119,6 +120,23 @@ func New(db *sql.DB) (AppDatabase, error) {
 		}
 	}
 
+	// Lightweight migrations for databases created before these features:
+	// per-user read receipts and image captions.
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS message_reads (
+		message_id INTEGER NOT NULL,
+		user_id VARCHAR(64) NOT NULL,
+		read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(message_id, user_id),
+		FOREIGN KEY(message_id) REFERENCES messages(id),
+		FOREIGN KEY(user_id) REFERENCES users(id)
+	);`); err != nil {
+		return nil, fmt.Errorf("error creating message_reads table: %w", err)
+	}
+	if _, err := db.Exec(`ALTER TABLE messages ADD COLUMN caption TEXT DEFAULT '';`); err != nil &&
+		!strings.Contains(err.Error(), "duplicate column") {
+		return nil, fmt.Errorf("error adding caption column: %w", err)
+	}
+
 	return &appdbimpl{
 		c: db,
 	}, nil
@@ -129,7 +147,7 @@ func (db *appdbimpl) Ping() error {
 }
 
 func createDatabase(db *sql.DB) error {
-	tables := [6]string{
+	tables := []string{
 		`CREATE TABLE IF NOT EXISTS users(
 			id VARCHAR(64), 
 			name VARCHAR(25) NOT NULL,
@@ -155,10 +173,11 @@ func createDatabase(db *sql.DB) error {
 		);`,
 
 		`CREATE TABLE IF NOT EXISTS messages(
-			id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+			id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 			datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			content TEXT NOT NULL,
 			content_type TEXT DEFAULT 'text',  -- ✅ New column to store message type
+			caption TEXT DEFAULT '',           -- optional text sent together with a media message
 			sender INTEGER NOT NULL,
 			conversation_id INTEGER NOT NULL,
 			status VARCHAR(10) DEFAULT 'delivered',
@@ -183,6 +202,15 @@ func createDatabase(db *sql.DB) error {
 			user_id VARCHAR(64) NOT NULL,
 			emoji VARCHAR(16) NOT NULL,
 			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(message_id, user_id),
+			FOREIGN KEY(message_id) REFERENCES messages(id),
+			FOREIGN KEY(user_id) REFERENCES users(id)
+		);`,
+
+		`CREATE TABLE IF NOT EXISTS message_reads (
+			message_id INTEGER NOT NULL,
+			user_id VARCHAR(64) NOT NULL,
+			read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(message_id, user_id),
 			FOREIGN KEY(message_id) REFERENCES messages(id),
 			FOREIGN KEY(user_id) REFERENCES users(id)

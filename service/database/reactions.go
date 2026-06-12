@@ -53,17 +53,19 @@ func (db *appdbimpl) GetReactionsByMessageID(messageID int) ([]Reaction, error) 
 	return reactions, rows.Err()
 }
 
-// MarkMessagesAsRead marks every message in the given conversation that was NOT
-// sent by readerID as 'read'. It is called when a user opens a conversation, so
-// that the sender's "read" checkmark lights up. Messages already 'read' are
-// left untouched.
+// MarkMessagesAsRead records that readerID has read every message in the
+// conversation that was not sent by them. It is called when a user opens a
+// conversation. Read receipts are tracked PER USER: the sender's double
+// checkmark lights up only once every other member has a row here (see the
+// computed status in GetMessagesByConversationId).
 func (db *appdbimpl) MarkMessagesAsRead(conversationID int, readerID string) error {
 	query := `
-		UPDATE messages
-		SET status = 'read'
-		WHERE conversation_id = ?
-		  AND sender <> ?
-		  AND status <> 'read';`
-	_, err := db.c.Exec(query, conversationID, readerID)
+		INSERT INTO message_reads (message_id, user_id)
+		SELECT m.id, ?
+		FROM messages m
+		WHERE m.conversation_id = ?
+		  AND m.sender <> ?
+		ON CONFLICT(message_id, user_id) DO NOTHING;`
+	_, err := db.c.Exec(query, readerID, conversationID, readerID)
 	return err
 }

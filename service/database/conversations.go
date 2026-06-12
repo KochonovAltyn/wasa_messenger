@@ -225,28 +225,41 @@ func (db *appdbimpl) SendMessageFull(conversationID int, senderID string, conten
 	return err
 }
 
-// GetMessagesByConversationId: now does a LEFT JOIN on the "parent" message
+// GetMessagesByConversationId: now does a LEFT JOIN on the "parent" message.
+// The message status is computed from the per-user read receipts: a message is
+// 'read' only when EVERY member of the conversation other than the sender has
+// opened it (this is what makes the double checkmark appear for the sender).
 func (db *appdbimpl) GetMessagesByConversationId(conversationID int) ([]MessageWithSender, error) {
 	query := `
-	SELECT 
+	SELECT
 	  m.id,
 	  m.datetime,
 	  m.content,
-	  m.status,
+	  COALESCE(m.caption, '') AS caption,
+	  CASE
+	    WHEN (SELECT COUNT(*) FROM convmembers cm
+	          WHERE cm.conversation_id = m.conversation_id AND cm.user_id <> m.sender) > 0
+	     AND (SELECT COUNT(DISTINCT mr.user_id) FROM message_reads mr WHERE mr.message_id = m.id) >=
+	         (SELECT COUNT(*) FROM convmembers cm
+	          WHERE cm.conversation_id = m.conversation_id AND cm.user_id <> m.sender)
+	    THEN 'read'
+	    WHEN m.status = 'read' THEN 'delivered'
+	    ELSE m.status
+	  END AS status,
 	  u.id         AS sender_id,
 	  u.name       AS sender_username,
 	  u.photo      AS sender_photo,
-	
+
 	  m.reply_to,
 	  pm.content   AS reply_to_content,
 	  pu.name      AS reply_to_sender_username
-	
+
 	FROM messages m
 	JOIN users u ON m.sender = u.id
-	
+
 	LEFT JOIN messages pm ON m.reply_to = pm.id
 	LEFT JOIN users pu    ON pm.sender = pu.id
-	
+
 	WHERE m.conversation_id = ?
 	ORDER BY m.datetime ASC;
     `
@@ -266,6 +279,7 @@ func (db *appdbimpl) GetMessagesByConversationId(conversationID int) ([]MessageW
 			&msg.ID,
 			&msg.Datetime,
 			&msg.Content,
+			&msg.Caption,
 			&msg.Status,
 			&msg.SenderID,
 			&msg.SenderUsername,
@@ -497,12 +511,14 @@ func (db *appdbimpl) DeleteComment(commentID int) error {
 	return err
 }
 
-// SendMessageWithType is extended to accept an optional replyTo parameter
+// SendMessageWithType is extended to accept an optional replyTo parameter and
+// an optional caption (text sent together with a media message).
 func (db *appdbimpl) SendMessageWithType(
 	conversationID int,
 	senderID string,
 	content string,
 	contentType string,
+	caption string,
 	replyTo *int,
 ) error {
 	// We'll include reply_to in the INSERT
@@ -512,11 +528,13 @@ func (db *appdbimpl) SendMessageWithType(
             sender,
             content,
             content_type,
+            caption,
             datetime,
             status,
             reply_to
         )
         VALUES (
+            ?,
             ?,
             ?,
             ?,
@@ -534,16 +552,16 @@ func (db *appdbimpl) SendMessageWithType(
 		replyToParam = *replyTo
 	}
 
-	_, err := db.c.Exec(query, conversationID, senderID, content, contentType, replyToParam)
+	_, err := db.c.Exec(query, conversationID, senderID, content, contentType, caption, replyToParam)
 	return err
 }
 
-func (db *appdbimpl) SendMessageWithMedia(conversationID int, senderID string, contentType string, content string) error {
+func (db *appdbimpl) SendMessageWithMedia(conversationID int, senderID string, contentType string, content string, caption string) error {
 	query := `
-        INSERT INTO messages (conversation_id, sender, content, content_type, datetime, status)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'delivered');
+        INSERT INTO messages (conversation_id, sender, content, content_type, caption, datetime, status)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'delivered');
     `
-	_, err := db.c.Exec(query, conversationID, senderID, content, contentType)
+	_, err := db.c.Exec(query, conversationID, senderID, content, contentType, caption)
 	return err
 }
 

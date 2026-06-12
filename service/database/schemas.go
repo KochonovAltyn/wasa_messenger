@@ -53,6 +53,7 @@ type MessageWithSender struct {
 	ID             int            `json:"id"`
 	Datetime       time.Time      `json:"datetime"`
 	Content        string         `json:"content"`
+	Caption        string         `json:"caption"` // optional text attached to a media message
 	Status         string         `json:"status"`
 	SenderID       string         `json:"sender_id"`
 	SenderUsername string         `json:"sender_username"`

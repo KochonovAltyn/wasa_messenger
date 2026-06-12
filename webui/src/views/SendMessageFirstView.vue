@@ -30,14 +30,15 @@
           </select>
         </div>
 
-        <!-- Message content section (only shown if the user selects 'text') -->
-        <div v-if="messageType === 'text'" class="form-group">
-          <label for="content">Message</label>
-          <textarea 
-            v-model="content" 
-            id="content" 
-            required
-            placeholder="Type your message here..."
+        <!-- Message content: required for text messages; for image/GIF it is
+             an optional caption sent together with the file in ONE message -->
+        <div v-if="messageType" class="form-group">
+          <label for="content">{{ messageType === 'text' ? 'Message' : 'Caption (optional)' }}</label>
+          <textarea
+            v-model="content"
+            id="content"
+            :required="messageType === 'text'"
+            :placeholder="messageType === 'text' ? 'Type your message here...' : 'Add a caption to your image...'"
           ></textarea>
         </div>
 

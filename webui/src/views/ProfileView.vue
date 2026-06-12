@@ -121,8 +121,9 @@ export default {
         this.errorMessage = "";
         this.successMessage = "";
         
-        await axios.put("/users/me/username", 
-          { username: this.newUsername.trim() },
+        // The backend expects the new name under the "newname" key.
+        await axios.put("/users/me/username",
+          { newname: this.newUsername.trim() },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
@@ -135,7 +136,9 @@ export default {
       } catch (error) {
         // Improved error handling
         if (error.response?.status === 409) {
-          this.errorMessage = "This username is already taken";
+          this.errorMessage =
+            error.response?.data?.error ||
+            `The username "${this.newUsername.trim()}" is already taken by another user. Please choose a different one.`;
         } else if (error.response?.status === 400) {
           this.errorMessage = "Invalid username format";
         } else {

@@ -99,7 +99,9 @@ func (rt *_router) setMyUserName(w http.ResponseWriter, r *http.Request, ps http
 
 	err = json.NewDecoder(r.Body).Decode(&input)
 	if err != nil || input.NewName == "" {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid input: newname is required"})
 		return
 	}
 
@@ -117,8 +119,13 @@ func (rt *_router) setMyUserName(w http.ResponseWriter, r *http.Request, ps http
 
 	// If a user *does* exist with that name, check whether it’s a *different* user.
 	if existingUser.Username != "" && existingUser.ID != userID {
-		// Another user already has this name => conflict
-		http.Error(w, "Username already exists", http.StatusConflict)
+		// Another user already has this name => conflict.
+		// Return a JSON body so the frontend can show a clear error message.
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "The username '" + input.NewName + "' is already taken by another user. Please choose a different one.",
+		})
 		return
 	}
 

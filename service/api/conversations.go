@@ -139,11 +139,14 @@ func (rt *_router) sendMessageFirst(w http.ResponseWriter, r *http.Request, ps h
 		return
 	}
 
-	// Handle file uploads (photo or GIF)
+	// Handle file uploads (photo or GIF). Any text sent along with the file
+	// is kept as the caption, so one message can hold both image and text.
 	file, header, err := r.FormFile("file")
-	var contentType, content string
+	var contentType, content, caption string
 	if err == nil { // File is uploaded
 		defer file.Close()
+
+		caption = r.FormValue("content")
 
 		// Save the file and get path & type
 		contentType, content, err = rt.db.SaveUploadedFile(file, header, senderID)
@@ -165,7 +168,7 @@ func (rt *_router) sendMessageFirst(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Send the first message
-	err = rt.db.SendMessageWithMedia(newConvo.ID, sender.ID, contentType, content)
+	err = rt.db.SendMessageWithMedia(newConvo.ID, sender.ID, contentType, content, caption)
 	if err != nil {
 		context.Logger.WithError(err).Error("Error sending message")
 		http.Error(w, "Error sending message", http.StatusInternalServerError)
@@ -235,12 +238,17 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		}
 	}
 
-	// Check if a file is uploaded (photo, GIF, etc.) or if it's just text
-	var content, contentType string
+	// Check if a file is uploaded (photo, GIF, etc.) or if it's just text.
+	// A single message can carry BOTH an image and text: the typed text is
+	// stored as the caption of the media message.
+	var content, contentType, caption string
 	file, header, fileErr := r.FormFile("file")
 
 	if fileErr == nil { // A file is uploaded
 		defer file.Close()
+
+		// Keep any text typed together with the image as the caption.
+		caption = r.FormValue("content")
 
 		// Validate file extension
 		fileExt := strings.ToLower(filepath.Ext(header.Filename))
@@ -312,7 +320,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	// ---------------------------------------------------------------------
 	// Save message to database, passing the optional replyTo reference
 	// ---------------------------------------------------------------------
-	err = rt.db.SendMessageWithType(conversationID, senderID, content, contentType, replyTo)
+	err = rt.db.SendMessageWithType(conversationID, senderID, content, contentType, caption, replyTo)
 	if err != nil {
 		context.Logger.WithError(err).Error("Error saving message")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -325,6 +333,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		"message":         "Message sent successfully",
 		"content_type":    contentType,
 		"content":         content,
+		"caption":         caption,
 		"sender_username": user.Username,
 		"sender_photo":    user.Photo.String, // could be empty if no photo
 	})
@@ -1070,8 +1079,11 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 		return
 	}
 
-	// Generate the correct photo URL for the frontend
-	photoURL := "/uploads/" + fileName
+	// Generate the correct photo URL for the frontend. The file name is fixed
+	// per group, so append a version parameter: the URL changes on every
+	// update and browsers re-fetch the image instead of serving the cached
+	// one — this is what makes the new photo show up instantly everywhere.
+	photoURL := "/uploads/" + fileName + "?v=" + strconv.FormatInt(time.Now().Unix(), 10)
 
 	// Update the group's profile photo in the database
 	err = rt.db.UpdateGroupPhoto(groupID, photoURL)
