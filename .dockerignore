@@ -1,0 +1,9 @@
+# Local build artifacts and dependencies that should not be sent to the Docker
+# build context (they are restored inside the image instead).
+webui/node_modules
+vendor
+database.db
+*.db
+.git
+__MACOSX
+**/.DS_Store
