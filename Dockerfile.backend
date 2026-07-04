@@ -11,8 +11,12 @@ RUN go mod download
 # Копируем весь код
 COPY . .
 
-# Собираем приложение БЕЗ vendor
-RUN go build -mod=readonly -o /app/webapi ./cmd/webapi
+# Собираем приложение БЕЗ vendor.
+# CGO_ENABLED=0 -> полностью статический бинарник без зависимости от системного
+# GLIBC. Это возможно, потому что драйвер SQLite (modernc.org/sqlite) написан на
+# чистом Go и не требует CGO. Иначе бинарник, собранный в golang:1.21 (новый GLIBC),
+# не запускается в debian:bullseye-slim (старый GLIBC).
+RUN CGO_ENABLED=0 go build -mod=readonly -o /app/webapi ./cmd/webapi
 
 # Финальный образ
 FROM debian:bullseye-slim
