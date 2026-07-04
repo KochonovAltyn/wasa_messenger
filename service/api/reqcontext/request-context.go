@@ -7,8 +7,8 @@ Each value here should be assumed valid only per request only, with some excepti
 package reqcontext
 
 import (
-	uuid "github.com/KochonovAltyn/wasa_messenger/service/uid"
 	logrus "github.com/KochonovAltyn/wasa_messenger/service/applog"
+	uuid "github.com/KochonovAltyn/wasa_messenger/service/uid"
 )
 
 // RequestContext is the context of the request, for request-dependent parameters

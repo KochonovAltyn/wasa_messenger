@@ -39,11 +39,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	_ "modernc.org/sqlite"
-	logrus "github.com/KochonovAltyn/wasa_messenger/service/applog"
 	"github.com/KochonovAltyn/wasa_messenger/service/api"
+	logrus "github.com/KochonovAltyn/wasa_messenger/service/applog"
 	"github.com/KochonovAltyn/wasa_messenger/service/database"
 	"github.com/KochonovAltyn/wasa_messenger/service/globaltime"
+	_ "modernc.org/sqlite"
 )
 
 // main is the program entry point. The only purpose of this function is to call run() and set the exit code if there is

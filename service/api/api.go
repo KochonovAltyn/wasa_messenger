@@ -40,9 +40,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
 	logrus "github.com/KochonovAltyn/wasa_messenger/service/applog"
 	"github.com/KochonovAltyn/wasa_messenger/service/database"
+	"github.com/julienschmidt/httprouter"
 )
 
 // Config is used to provide dependencies and configuration to the New function.

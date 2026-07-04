@@ -71,7 +71,6 @@ func (db *appdbimpl) GetUser(username string) (user User, err error) {
 	return user, nil
 }
 
-
 func (db *appdbimpl) GetUserId(id string) (user User, err error) {
 	// Query the database for the user by ID (UUID)
 	query := `SELECT id, name, photo FROM users WHERE id = ?;`

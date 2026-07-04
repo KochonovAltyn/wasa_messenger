@@ -6,8 +6,8 @@ import (
 
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/KochonovAltyn/wasa_messenger/service/api/reqcontext"
+	"github.com/julienschmidt/httprouter"
 
 	// "github.com/sirupsen/logrus"
 	"database/sql"

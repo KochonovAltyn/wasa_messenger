@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings" // Import the strings package
 
+	"github.com/KochonovAltyn/wasa_messenger/service/api/reqcontext"
+	logrus "github.com/KochonovAltyn/wasa_messenger/service/applog"
 	uuid "github.com/KochonovAltyn/wasa_messenger/service/uid"
 	"github.com/julienschmidt/httprouter"
-	logrus "github.com/KochonovAltyn/wasa_messenger/service/applog"
-	"github.com/KochonovAltyn/wasa_messenger/service/api/reqcontext"
 )
 
 // httpRouterHandler is the signature for functions that accepts a reqcontext.RequestContext in addition to those

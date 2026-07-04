@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/KochonovAltyn/wasa_messenger/service/api/reqcontext"
+	"github.com/julienschmidt/httprouter"
 )
 
 func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps httprouter.Params, context *reqcontext.RequestContext) {
@@ -187,7 +187,6 @@ func (rt *_router) sendMessageFirst(w http.ResponseWriter, r *http.Request, ps h
 	}
 }
 
-
 func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, context *reqcontext.RequestContext) {
 	context.Logger.Info("Request received: method=%s, path=%s", r.Method, r.URL.Path)
 
@@ -221,7 +220,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		context.Logger.Error("Sender is not part of the conversation")
 		http.Error(w, "Sender is not part of the conversation", http.StatusForbidden)
 		return
-	} 
+	}
 
 	// ----------------------------------------------------------------
 	// OPTIONALLY parse "reply_to" from form data (if user is replying)

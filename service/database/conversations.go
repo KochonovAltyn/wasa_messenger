@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-
-
-
 func (db *appdbimpl) GetConversationById(conversationID int) (conversation Conversation, err error) {
 	query := `
 		SELECT id, lastconvo, is_group, photo, name
