@@ -12,9 +12,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// ErrHelpWanted is returned by loadConfiguration when the user requested the
-// usage/help output (via -h/-help). It replaces conf.ErrHelpWanted from the
-// previously used github.com/ardanlabs/conf dependency.
+// ErrHelpWanted is returned by loadConfiguration when the user asked for the
+// usage/help output (via -h/-help).
 var ErrHelpWanted = errors.New("help requested")
 
 // WebAPIConfiguration describes the web API configuration. This structure is

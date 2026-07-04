@@ -1,8 +1,5 @@
-// Package applog is a small structured-logging facade built on the standard
-// library's log/slog. It replaces the previously used github.com/sirupsen/logrus
-// dependency while preserving the subset of the logrus API used throughout this
-// project (New, SetOutput, SetLevel, WithError, WithFields, and the leveled
-// printf/println-style methods).
+// Package applog is a small structured-logging helper built on top of the
+// standard library log/slog package.
 package applog
 
 import (
@@ -13,7 +10,7 @@ import (
 	"os"
 )
 
-// Level mirrors the logrus level concept for the values this project uses.
+// Level is the minimum severity a logger will emit.
 type Level int
 
 const (
@@ -23,12 +20,10 @@ const (
 	InfoLevel
 )
 
-// Fields is a map of structured key/value pairs attached to a log entry.
-// It is the drop-in equivalent of logrus.Fields.
+// Fields is a set of structured key/value pairs attached to a log entry.
 type Fields map[string]interface{}
 
-// FieldLogger is the interface consumed by the rest of the codebase. It is the
-// equivalent of logrus.FieldLogger for the methods actually used here.
+// FieldLogger is the logging interface used across the project.
 type FieldLogger interface {
 	WithError(err error) FieldLogger
 	WithFields(fields Fields) FieldLogger
@@ -114,7 +109,7 @@ func (l *Logger) log(level slog.Level, msg string) {
 	l.sl.LogAttrs(context.Background(), level, msg, l.attrs...)
 }
 
-// Leveled, args-joined methods (logrus print-style).
+// Leveled methods that join their arguments.
 
 func (l *Logger) Debug(args ...interface{})   { l.log(slog.LevelDebug, fmt.Sprint(args...)) }
 func (l *Logger) Info(args ...interface{})    { l.log(slog.LevelInfo, fmt.Sprint(args...)) }
@@ -123,7 +118,7 @@ func (l *Logger) Warning(args ...interface{}) { l.log(slog.LevelWarn, fmt.Sprint
 func (l *Logger) Error(args ...interface{})   { l.log(slog.LevelError, fmt.Sprint(args...)) }
 func (l *Logger) Println(args ...interface{}) { l.log(slog.LevelInfo, fmt.Sprint(args...)) }
 
-// Leveled, formatted methods (logrus printf-style).
+// Leveled methods with printf-style formatting.
 
 func (l *Logger) Debugf(format string, args ...interface{}) {
 	l.log(slog.LevelDebug, fmt.Sprintf(format, args...))

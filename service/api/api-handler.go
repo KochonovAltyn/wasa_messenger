@@ -32,10 +32,6 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.GET("/search/users", rt.wrap(rt.searchUser))
 
 	// Emoji reactions on messages
-	// NOTE: httprouter stores its routing tree per HTTP method, and each method
-	// has already fixed the wildcard name on the /conversations/ prefix:
-	// PUT uses :c_id (set-group-photo), DELETE uses :conversation_id (deleteMessage).
-	// We must match those names per method to avoid a wildcard-conflict panic.
 	rt.router.PUT("/conversations/:c_id/messages/:message_id/reaction", rt.wrap(rt.setReaction))
 	rt.router.DELETE("/conversations/:conversation_id/messages/:message_id/reaction", rt.wrap(rt.removeReaction))
 

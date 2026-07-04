@@ -1,6 +1,4 @@
-// Package uid provides minimal RFC 4122 version 4 (random) UUID generation
-// using only the Go standard library. It replaces the previously used
-// github.com/gofrs/uuid dependency with a small, self-contained implementation.
+// Package uid generates random (version 4) UUIDs using the standard library.
 package uid
 
 import (
@@ -11,16 +9,14 @@ import (
 // UUID is a 128-bit (16-byte) RFC 4122 universally unique identifier.
 type UUID [16]byte
 
-// NewV4 returns a randomly generated (version 4) UUID. It reads from
-// crypto/rand and sets the version and variant bits as required by RFC 4122.
+// NewV4 returns a randomly generated version 4 UUID.
 func NewV4() (UUID, error) {
 	var u UUID
 	if _, err := rand.Read(u[:]); err != nil {
 		return UUID{}, err
 	}
-	// Set version to 4 (random): the high nibble of byte 6 becomes 0100.
+	// set version (4) and variant bits
 	u[6] = (u[6] & 0x0f) | 0x40
-	// Set variant to RFC 4122: the two high bits of byte 8 become 10.
 	u[8] = (u[8] & 0x3f) | 0x80
 	return u, nil
 }
