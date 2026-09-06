@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/KochonovAltyn/wasa_messenger/service/uploads"
 )
 
 func (db *appdbimpl) GetConversationById(conversationID int) (conversation Conversation, err error) {
@@ -579,7 +581,7 @@ func (db *appdbimpl) SaveUploadedFile(file io.Reader, header *multipart.FileHead
 	}
 
 	// Ensure uploads directory exists
-	uploadDir := "webui/public/uploads"
+	uploadDir := uploads.Dir()
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 
 		return "", "", errors.New("fail to create a directory")

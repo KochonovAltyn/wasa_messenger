@@ -116,13 +116,17 @@
                   v-if="message.sender_id === currentUser"
                   class="message-status"
                 >
-                  <!-- Single grey check = sent/delivered.
-                       Double check appears ONLY when every other member
-                       of the conversation has opened (read) the message. -->
+                  <!-- One grey check = sent, two grey = delivered,
+                       two blue = read (every other member opened it). -->
                   <span
-                    v-if="!message.status || message.status === 'sent' || message.status === 'delivered'"
+                    v-if="!message.status || message.status === 'sent'"
                     class="status-sent"
                     >✓</span
+                  >
+                  <span
+                    v-else-if="message.status === 'delivered'"
+                    class="status-delivered"
+                    >✓✓</span
                   >
                   <span
                     v-else-if="message.status === 'read'"

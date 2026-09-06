@@ -118,6 +118,11 @@ func New(db *sql.DB) (AppDatabase, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error creating database structure: %w", err)
 		}
+	} else if err != nil {
+		// Any other error means we could not read from the database at all
+		// (for example the file cannot be opened): report it instead of
+		// continuing with a broken connection.
+		return nil, fmt.Errorf("error checking database structure: %w", err)
 	}
 
 	// Lightweight migrations for databases created before these features:

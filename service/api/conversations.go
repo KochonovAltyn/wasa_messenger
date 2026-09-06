@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/KochonovAltyn/wasa_messenger/service/api/reqcontext"
+	"github.com/KochonovAltyn/wasa_messenger/service/uploads"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -266,7 +267,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		}
 
 		// Ensure the upload directory exists
-		uploadDir := "webui/public/uploads"
+		uploadDir := uploads.Dir()
 		if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 			context.Logger.WithError(err).Error("Failed to create upload directory")
 			http.Error(w, "Failed to save file", http.StatusInternalServerError)
@@ -1053,7 +1054,7 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	// Ensure upload directory exists
-	uploadDir := "webui/public/uploads"
+	uploadDir := uploads.Dir()
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 		ctx.Logger.WithError(err).Error("Failed to create upload directory")
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
@@ -1149,7 +1150,7 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 		}
 
 		// Ensure uploads directory exists
-		uploadDir := "webui/public/uploads"
+		uploadDir := uploads.Dir()
 		if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 			context.Logger.WithError(err).Error("Failed to create upload directory")
 			http.Error(w, "Failed to save file", http.StatusInternalServerError)

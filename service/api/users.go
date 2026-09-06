@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/KochonovAltyn/wasa_messenger/service/api/reqcontext"
+	"github.com/KochonovAltyn/wasa_messenger/service/uploads"
 	"github.com/julienschmidt/httprouter"
 
 	"database/sql"
@@ -163,7 +164,7 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 
 	// Ensure upload directory exists
-	uploadDir := "webui/public/uploads"
+	uploadDir := uploads.Dir()
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 		ctx.Logger.WithError(err).Error("Failed to create upload directory")
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)

@@ -30,6 +30,12 @@ COPY --from=builder /app/webapi /app/webapi
 # Рабочая директория
 WORKDIR /app
 
+# Файл базы данных SQLite и загруженные пользователями файлы создаются во время
+# работы приложения. Кладём их в /tmp, потому что рабочая директория контейнера
+# может быть доступна только для чтения.
+ENV CFG_DB_FILENAME=/tmp/database.db
+ENV CFG_UPLOAD_DIR=/tmp/uploads
+
 # Открываем порт
 EXPOSE 3000
 
